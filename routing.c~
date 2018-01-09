@@ -9,6 +9,7 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <linux/if_ether.h>
+#include <linux/in.h>
 #define MAX_ROUTE 256
 #define MAX_ARP 256
 #define MAX_DEVICE 256
@@ -58,7 +59,7 @@ int main()
     {
         memset(buffer,0,sizeof(buffer));
         memset(send_buf,0,sizeof(send_buf));
-        n_read = recvfrom(sockfd,buffer,2048,0,NULL,NULL);
+        n_read = recvfrom(sock_fd,buffer,2048,0,NULL,NULL);
         if(n_read < 42)
         {
             printf("error when recv msg");
@@ -81,7 +82,7 @@ int main()
     return 0;
 }
 
-void init()//initialization of tables and maps
+void initexp2()//initialization of tables and maps
 {
     strcpy(route_info[0].destination,"192.168.3.0");
     strcpy(route_info[0].gateway,"192.168.2.31");
@@ -92,13 +93,13 @@ void init()//initialization of tables and maps
     strcpy(route_info[1].netmask,"255.255.255.0");
     strcpy(route_info[1].interface,"eth8");
     strcpy(arp_map[0].ip_addr,"192.168.1.30");
-    strcpy(arp_map[0].mac_addr,"08:00:27:5B:5F:E0");
+    strcpy(apr_map[0].mac_addr,"08:00:27:5B:5F:E0");
     strcpy(arp_map[1].ip_addr,"192.168.2.31");
-    strcpy(arp_map[1].mac_addr,"08:00:27:64:6B:B2");
-    strcpy(device[0].interface,"eth6");
-    strcpy(device[0].mac_addr,"08:00:27:55:D1:54");
-    strcpy(device[1].interface,"eth8");
-    strcpy(device[1].mac_addr,"08:00:27:45:9A:C2");
+    strcpy(apr_map[1].mac_addr,"08:00:27:64:6B:B2");
+    strcpy(device_item[0].interface,"eth6");
+    strcpy(device_item[0].mac_addr,"08:00:27:55:D1:54");
+    strcpy(device_item[1].interface,"eth8");
+    strcpy(device_item[1].mac_addr,"08:00:27:45:9A:C2");
 }
 void initexp3()
 {
@@ -111,13 +112,13 @@ void initexp3()
     strcpy(route_info[1].netmask,"255.255.255.0");
     strcpy(route_info[1].interface,"eth6");
     strcpy(arp_map[0].ip_addr,"192.168.2.30");
-    strcpy(arp_map[0].mac_addr,"08:00:27:55:D1:54");
+    strcpy(apr_map[0].mac_addr,"08:00:27:55:D1:54");
     strcpy(arp_map[1].ip_addr,"192.168.3.31");
-    strcpy(arp_map[1].mac_addr,"08:00:27:9E:E3:FA");
-    strcpy(device[0].interface,"eth6");
-    strcpy(device[0].mac_addr,"08:00:27:64:6B:B2");
-    strcpy(device[1].interface,"eth8");
-    strcpy(device[1].mac_addr,"08:00:27:6D:6D:72");
+    strcpy(apr_map[1].mac_addr,"08:00:27:9E:E3:FA");
+    strcpy(device_item[0].interface,"eth6");
+    strcpy(device_item[0].mac_addr,"08:00:27:64:6B:B2");
+    strcpy(device_item[1].interface,"eth8");
+    strcpy(device_item[1].mac_addr,"08:00:27:6D:6D:72");
 }
 void ip_byte2str(char* dest,unsigned char* byte_ip)
 {
@@ -125,15 +126,11 @@ void ip_byte2str(char* dest,unsigned char* byte_ip)
 }
 void ip_str2byte(unsigned char* dest, char* str_ip)
 {
-	unsigned a,b,c,d;
-    sscanf(str_ip,"%d.%d.%d.%d",&a,&b,&c,&d);
-	*(unsigned int *)dest = (a << 24) + (b << 16) + (c << 8) + d;
+    sscanf(str_ip,"%d.%d.%d.%d",dest[0],dest[1],dest[2],dest[3]);
 }
 void mac_str2byte(unsigned char* dest,char* str_mac)
 {
-	unsigned a,b,c,d,e,f;
-    sscanf(str_mac,"%x:%x:%x:%x:%x:%x",&a,&b,&c,&d,&e,&f);
-	*(unsigned long*)dest = ((unsigned long)a << 40) + ((unsigned long)b << 32) + (c<<24) + (d<<16) + (e << 8) + f;
+    sscanf(str_mac,"%.2x:%.2x:%.2x:%.2x:%.2x:%.2x",dest[0],dest[1],dest[2],dest[3],dest[4],dest[5]);
 }
 int get_route_index(unsigned char* dest_ip_byte)
 {
@@ -141,9 +138,9 @@ int get_route_index(unsigned char* dest_ip_byte)
     for(i = 0;i<route_num;i++)
     {   
         unsigned mask;
-        ip_str2byte((unsigned char*)&mask,route_info[i].netmask);
+        ip_str2byte((unsigned char)&mask,route_info[i].netmask);
         unsigned item_ip_byte;
-        ip_str2byte((unsigned char*)&item_ip_byte,route_info[i].destination);
+        ip_str2byte((unsigned char)&item_ip_byte,route_info[i].destination);
         unsigned pattern = item_ip_byte & mask;
         unsigned trimmed_dest_ip = *(unsigned*)dest_ip_byte & mask;
         if(pattern == trimmed_dest_ip)
